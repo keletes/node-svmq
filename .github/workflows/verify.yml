@@ -1,0 +1,36 @@
+name: Verify
+
+# PR gate for master. Required status check (branch protection): `test`.
+# Builds the native addon (node-gyp, on the runner's toolchain) and runs the jasmine suite against real System V queues.
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22: semantic-release and its plugins (devDependencies) need it.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      # `install` runs node-gyp rebuild
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Test
+        run: yarn test
