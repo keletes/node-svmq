@@ -22,9 +22,14 @@ Published to GitHub Packages as `@keletes/svmq` (fork of [jhead/node-svmq](https
 //npm.pkg.github.com/:_authToken=<token>
 ```
 
-`npm install @keletes/svmq` (then `require('@keletes/svmq')`). The package ships the C++ sources and `binding.gyp`, no prebuilt binaries: `node-gyp rebuild` runs at install, so Python, make and a C++ compiler must be available.
+`npm install @keletes/svmq` (then `require('@keletes/svmq')`). No build tools are needed: the package ships prebuilt binaries for **linux-x64**, **linux-arm64** (glibc), **darwin-arm64** and **darwin-x64**, and [`node-gyp-build`](https://github.com/prebuild/node-gyp-build) loads the one matching the platform at runtime.
 
-Native bindings are written in C/C++ using [NAN](https://github.com/nodejs/nan) and built automatically on install.
+The addon is written with N-API (`node-addon-api`), so one binary per platform works across Node majors (Node >= 18). On any other platform (e.g. Alpine/musl) `npm install` falls back to compiling from the shipped sources (`binding.gyp`, `src/`); that needs Python, make and a C++ compiler.
+
+TypeScript: the package ships its own types (`index.d.ts`, `export =` of the `MessageQueue` class; use `import MessageQueue from '@keletes/svmq'` with `esModuleInterop`, or `import MessageQueue = require('@keletes/svmq')`).
+
+### Releases
+`tag.yml` builds the addon with `prebuildify --napi` on `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-14` and `macos-13`, and the release job downloads the four `prebuilds/<platform>-<arch>/` folders before semantic-release publishes, so the tarball contains all of them. Locally, `yarn prebuild` builds the current platform into `prebuilds/` (git-ignored).
 
 ## Usage
 

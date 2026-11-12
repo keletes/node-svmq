@@ -1,7 +1,8 @@
 name: Verify
 
 # PR gate for master. Required status check (branch protection): `test`.
-# Builds the native addon (node-gyp, on the runner's toolchain) and runs the jasmine suite against real System V queues.
+# Builds the native addon on the runner (ubuntu only; the four-platform prebuilds are built by tag.yml), type-checks
+# index.d.ts and runs the jasmine suite against real System V queues.
 
 on:
   pull_request:
@@ -28,9 +29,9 @@ jobs:
           node-version: 22
           cache: yarn
 
-      # `install` runs node-gyp rebuild
+      # `install` runs node-gyp-build, which compiles the addon here because no prebuild exists in a fresh checkout
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Test
-        run: yarn test
+      - name: Verify (type test + specs)
+        run: yarn verify
