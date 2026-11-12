@@ -2,7 +2,8 @@ name: Tag release
 
 # Trunk-based release: every push to master runs semantic-release, which parses the Conventional Commit messages since
 # the last release (see pr-title.yml and CLAUDE.md) to decide whether and what to release. When it does:
-#   1. @semantic-release/npm publishes @keletes/svmq (sources + binding.gyp; consumers compile it at install) to GitHub Packages
+#   1. @semantic-release/npm publishes @keletes/svmq (prebuilt N-API binaries for linux-x64, linux-arm64, darwin-arm64 and
+#      darwin-x64 under prebuilds/, plus sources + binding.gyp for the fallback compile) to GitHub Packages
 #   2. the vX.Y.Z tag is created and a GitHub Release is published
 #
 # No release commit is pushed back (the protected master rejects it); package.json's version is the placeholder
@@ -18,7 +19,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # One N-API binary per platform (prebuild.yml); uploaded as artifacts for the release job to bundle.
+  prebuild:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/prebuild.yml
+
   release:
+    needs: prebuild
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -33,12 +41,12 @@ jobs:
           owner: keletes
           repositories: ${{ github.event.repository.name }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: yarn
@@ -46,8 +54,22 @@ jobs:
           scope: '@keletes'
 
       # Public repo and no private packages: no PACKAGES_READ_PAT step.
+      # --ignore-scripts: the release job needs no addon; the published tarball gets the prebuilds below.
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile --ignore-scripts
+
+      # Every matrix artifact lands in prebuilds/<platform>-<arch>/; `files` in package.json ships the folder.
+      - name: Download prebuilds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: prebuilds-*
+          path: prebuilds
+          merge-multiple: true
+
+      - name: Check all four prebuilds are present
+        run: |
+          ls prebuilds/linux-x64/*.glibc.node prebuilds/linux-arm64/*.glibc.node \
+             prebuilds/darwin-arm64/*.node prebuilds/darwin-x64/*.node
 
       - name: Release
         run: yarn semantic-release

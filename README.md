@@ -22,9 +22,14 @@ Published to GitHub Packages as `@keletes/svmq` (fork of [jhead/node-svmq](https
 //npm.pkg.github.com/:_authToken=<token>
 ```
 
-`npm install @keletes/svmq` (then `require('@keletes/svmq')`). The package ships the C++ sources and `binding.gyp`, no prebuilt binaries: `node-gyp rebuild` runs at install, so Python, make and a C++ compiler must be available.
+`npm install @keletes/svmq` (then `require('@keletes/svmq')`). No build tools are needed: the package ships prebuilt binaries for **linux-x64**, **linux-arm64** (glibc), **darwin-arm64** and **darwin-x64**, and [`node-gyp-build`](https://github.com/prebuild/node-gyp-build) loads the one matching the platform at runtime.
 
-Native bindings are written in C/C++ using [NAN](https://github.com/nodejs/nan) and built automatically on install.
+The addon is written with N-API (`node-addon-api`), so one binary per platform works across Node majors (Node >= 18). Linux prebuilds are glibc only (`--tag-libc`): on musl (e.g. Alpine) and any other platform `npm install` falls back to compiling from the shipped sources (`binding.gyp`, `src/`); that needs Python, make and a C++ compiler.
+
+TypeScript: the package ships its own types (`index.d.ts`, `export =` of the `MessageQueue` class; use `import MessageQueue from '@keletes/svmq'` with `esModuleInterop`, or `import MessageQueue = require('@keletes/svmq')`).
+
+### Releases
+`prebuild.yml` (reusable; called by `tag.yml` and by `verify.yml`, where a `package` job packs, installs the tarball with `--ignore-scripts` and runs a push/pop round trip) builds the addon with `prebuildify --napi --strip --tag-libc` on `ubuntu-24.04` and `ubuntu-24.04-arm` (inside `node:22-bullseye`, glibc 2.31, so the binaries load on Debian 11+/Ubuntu 20.04+), `macos-15` and `macos-15-intel`, and the release job downloads the four `prebuilds/<platform>-<arch>/` folders before semantic-release publishes, so the tarball contains all of them. Locally, `yarn prebuild` builds the current platform into `prebuilds/` (git-ignored).
 
 ## Usage
 
@@ -167,6 +172,9 @@ msg.rcv(id, MSGMAX, 0, 0, (err, data) => {
   if (err) throw err;
   console.log('Received data: ' + data.toString());
 });
+
+// ctl supports IPC_STAT (returns the raw msqid_ds Buffer); IPC_SET throws a TypeError (unsupported).
+// rcv throws a TypeError if bufferLength is negative or above MSGMAX.
 
 // Close/delete a queue
 // Throws an error on failure

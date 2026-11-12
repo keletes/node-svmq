@@ -4,9 +4,11 @@
   "description": "Native System V message queues in Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "jasmine spec/**/*.js",
-    "install": "node-gyp rebuild",
-    "verify": "yarn test"
+    "test": "jasmine",
+    "test:types": "tsc -p test/tsconfig.json",
+    "prebuild": "prebuildify --napi --strip --tag-libc",
+    "install": "node-gyp-build",
+    "verify": "yarn test:types && yarn test"
   },
   "repository": {
     "type": "git",
@@ -29,17 +31,18 @@
     "url": "https://github.com/keletes/node-svmq/issues"
   },
   "homepage": "https://github.com/keletes/node-svmq#readme",
-  "dependencies": {
-    "nan": "^2.22.0"
-  },
   "devDependencies": {
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/github": "^12.0.9",
     "@semantic-release/npm": "^13.1.5",
     "@semantic-release/release-notes-generator": "^14.1.1",
+    "@types/node": "^26.6.6",
     "conventional-changelog-conventionalcommits": "^9.3.1",
     "jasmine": "^3.6.1",
-    "semantic-release": "^25.0.9"
+    "node-gyp": "^13.1.0",
+    "prebuildify": "^6.0.1",
+    "semantic-release": "^25.0.9",
+    "typescript": "^7.0.2"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
@@ -49,6 +52,15 @@
     "index.js",
     "index.d.ts",
     "lib",
-    "src"
-  ]
+    "src",
+    "prebuilds"
+  ],
+  "types": "index.d.ts",
+  "dependencies": {
+    "node-addon-api": "^8.9.2",
+    "node-gyp-build": "^4.8.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
