@@ -23,16 +23,19 @@ jobs:
   prebuild:
     name: prebuild ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    # Linux targets build inside an old-glibc image (bullseye: glibc 2.31, GCC 10 libstdc++) so the binary also loads on
+    # bookworm and newer; an empty `container` (macOS) runs on the host.
+    container: ${{ matrix.container }}
     permissions:
       contents: read
     strategy:
       fail-fast: true
       matrix:
         include:
-          - { os: ubuntu-24.04, target: linux-x64 }
-          - { os: ubuntu-24.04-arm, target: linux-arm64 }
-          - { os: macos-14, target: darwin-arm64 }
-          - { os: macos-13, target: darwin-x64 }
+          - { os: ubuntu-24.04, target: linux-x64, container: 'node:22-bullseye' }
+          - { os: ubuntu-24.04-arm, target: linux-arm64, container: 'node:22-bullseye' }
+          - { os: macos-14, target: darwin-arm64, container: '' }
+          - { os: macos-15-intel, target: darwin-x64, container: '' }
     steps:
       - uses: actions/checkout@v4
 

@@ -29,7 +29,7 @@ The addon is written with N-API (`node-addon-api`), so one binary per platform w
 TypeScript: the package ships its own types (`index.d.ts`, `export =` of the `MessageQueue` class; use `import MessageQueue from '@keletes/svmq'` with `esModuleInterop`, or `import MessageQueue = require('@keletes/svmq')`).
 
 ### Releases
-`tag.yml` builds the addon with `prebuildify --napi` on `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-14` and `macos-13`, and the release job downloads the four `prebuilds/<platform>-<arch>/` folders before semantic-release publishes, so the tarball contains all of them. Locally, `yarn prebuild` builds the current platform into `prebuilds/` (git-ignored).
+`tag.yml` builds the addon with `prebuildify --napi` on `ubuntu-24.04` and `ubuntu-24.04-arm` (inside `node:22-bullseye`, glibc 2.31, so the binaries load on Debian 11+/Ubuntu 20.04+), `macos-14` and `macos-15-intel`, and the release job downloads the four `prebuilds/<platform>-<arch>/` folders before semantic-release publishes, so the tarball contains all of them. Locally, `yarn prebuild` builds the current platform into `prebuilds/` (git-ignored).
 
 ## Usage
 

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#ifndef linux
+#ifndef __linux__
 struct msgbuf {
   long mtype;
   char mtext[1];
