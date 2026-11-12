@@ -1,0 +1,57 @@
+name: Tag release
+
+# Trunk-based release: every push to master runs semantic-release, which parses the Conventional Commit messages since
+# the last release (see pr-title.yml and CLAUDE.md) to decide whether and what to release. When it does:
+#   1. @semantic-release/npm publishes @keletes/svmq (sources + binding.gyp; consumers compile it at install) to GitHub Packages
+#   2. the vX.Y.Z tag is created and a GitHub Release is published
+#
+# No release commit is pushed back (the protected master rejects it); package.json's version is the placeholder
+# 0.0.0-development. The package publish uses the job's GITHUB_TOKEN; tag and release use the GitHub App token.
+on:
+  push:
+    branches: [master]
+  # Manual re-run of a release (e.g. after a failed or stuck run); semantic-release only releases from master and only when there are unreleased feat/fix commits, so a manual run is otherwise a no-op.
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Mint GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: keletes
+          repositories: ${{ github.event.repository.name }}
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          registry-url: https://npm.pkg.github.com
+          scope: '@keletes'
+
+      # Public repo and no private packages: no PACKAGES_READ_PAT step.
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Release
+        run: yarn semantic-release
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

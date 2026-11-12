@@ -13,7 +13,16 @@ serialize PHP objects to JSON and pass them to Node.js (and vice versa) without 
 sockets, etc. and without having to spawn processes from within Node.js.
 
 ## Installation
-`npm install svmq`
+Published to GitHub Packages as `@keletes/svmq` (fork of [jhead/node-svmq](https://github.com/jhead/node-svmq)). Point the `@keletes` scope at the registry and authenticate with a token that has `read:packages`:
+
+```
+# .npmrc (project)
+@keletes:registry=https://npm.pkg.github.com
+# ~/.npmrc or CI (never commit the token)
+//npm.pkg.github.com/:_authToken=<token>
+```
+
+`npm install @keletes/svmq` (then `require('@keletes/svmq')`). The package ships the C++ sources and `binding.gyp`, no prebuilt binaries: `node-gyp rebuild` runs at install, so Python, make and a C++ compiler must be available.
 
 Native bindings are written in C/C++ using [NAN](https://github.com/nodejs/nan) and built automatically on install.
 

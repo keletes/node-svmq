@@ -1,15 +1,16 @@
 {
-  "name": "svmq",
-  "version": "1.3.0",
+  "name": "@keletes/svmq",
+  "version": "0.0.0-development",
   "description": "Native System V message queues in Node.js",
   "main": "index.js",
   "scripts": {
     "test": "jasmine spec/**/*.js",
-    "install": "node-gyp rebuild"
+    "install": "node-gyp rebuild",
+    "verify": "yarn test"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jhead/node-svmq.git"
+    "url": "git+https://github.com/keletes/node-svmq.git"
   },
   "keywords": [
     "system",
@@ -25,13 +26,29 @@
   "license": "MIT",
   "gypfile": true,
   "bugs": {
-    "url": "https://github.com/jhead/node-svmq/issues"
+    "url": "https://github.com/keletes/node-svmq/issues"
   },
-  "homepage": "https://github.com/jhead/node-svmq#readme",
+  "homepage": "https://github.com/keletes/node-svmq#readme",
   "dependencies": {
     "nan": "^2.22.0"
   },
   "devDependencies": {
-    "jasmine": "^3.6.1"
-  }
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/github": "^12.0.9",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.1",
+    "conventional-changelog-conventionalcommits": "^10.4.1",
+    "jasmine": "^3.6.1",
+    "semantic-release": "^25.0.9"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "files": [
+    "binding.gyp",
+    "index.js",
+    "index.d.ts",
+    "lib",
+    "src"
+  ]
 }
