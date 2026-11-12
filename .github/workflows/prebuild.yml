@@ -22,12 +22,12 @@ jobs:
         include:
           - { os: ubuntu-24.04, target: linux-x64, container: 'node:22-bullseye' }
           - { os: ubuntu-24.04-arm, target: linux-arm64, container: 'node:22-bullseye' }
-          - { os: macos-14, target: darwin-arm64, container: '' }
+          - { os: macos-15, target: darwin-arm64, container: '' }
           - { os: macos-15-intel, target: darwin-x64, container: '' }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: yarn
