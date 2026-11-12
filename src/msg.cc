@@ -16,6 +16,9 @@ struct msgbuf {
 
 namespace {
 
+// Same limit as MessageQueue.MSGMAX in lib/queue.js.
+const double kMsgMax = 4052;
+
 std::string ErrorText(const std::string &message, int errcode) {
   return message + ": " + strerror(errcode);
 }
@@ -25,10 +28,9 @@ class SendWorker : public Napi::AsyncWorker {
  public:
   SendWorker(Napi::Function cb, int id, const char *data, size_t length, long type, int flags)
       : Napi::AsyncWorker(cb), id(id), type(type), flags(flags), ret(0), error(0),
-        message(sizeof(long) + length) {
+        message(sizeof(long) + length), dataLength(length) {
     ((struct msgbuf *)message.data())->mtype = type;
     if (length > 0) memcpy(((struct msgbuf *)message.data())->mtext, data, length);
-    dataLength = length;
   }
 
   void Execute() override {
@@ -133,21 +135,32 @@ Napi::Value Receive(const Napi::CallbackInfo &info) {
     Napi::TypeError::New(env, "rcv(id, bufferLength, type, flags, callback)").ThrowAsJavaScriptException();
     return env.Undefined();
   }
+  double length = info[1].ToNumber().DoubleValue();
+  if (!(length >= 0 && length <= kMsgMax)) {
+    Napi::TypeError::New(env, "bufferLength must be between 0 and MSGMAX").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
   (new ReceiveWorker(info[4].As<Napi::Function>(), info[0].ToNumber().Int32Value(),
-                     (size_t)info[1].ToNumber().Uint32Value(), (long)info[2].ToNumber().Int32Value(),
+                     (size_t)length, (long)info[2].ToNumber().Int32Value(),
                      info[3].ToNumber().Int32Value()))
       ->Queue();
   return env.Undefined();
 }
 
-// ctl(id, cmd) -> Buffer with the raw msqid_ds on IPC_STAT/IPC_SET success, else msgctl's return value.
+// ctl(id, cmd) -> Buffer with the raw msqid_ds on IPC_STAT success, else msgctl's return value.
+// IPC_SET is rejected with a TypeError: it would write a zeroed msqid_ds (uid/gid/mode/qbytes reset to 0).
 Napi::Value Control(const Napi::CallbackInfo &info) {
   Napi::Env env = info.Env();
   if (!CheckArgs(info, 2)) return env.Undefined();
   int id = info[0].ToNumber().Int32Value();
   int cmd = info[1].ToNumber().Int32Value();
 
-  if (cmd != IPC_STAT && cmd != IPC_SET) {
+  if (cmd == IPC_SET) {
+    Napi::TypeError::New(env, "IPC_SET is not supported").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  if (cmd != IPC_STAT) {
     return Napi::Number::New(env, msgctl(id, cmd, nullptr));
   }
 

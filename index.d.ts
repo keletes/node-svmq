@@ -83,7 +83,7 @@ declare namespace MessageQueue {
     snd(id: number, data: Buffer, type: number, flags: number, callback: (err: Error | null) => void): void;
     /** msgrcv on a worker thread. */
     rcv(id: number, bufferLength: number, type: number, flags: number, callback: (err: Error | null, data: Buffer | null) => void): void;
-    /** msgctl; returns the raw msqid_ds Buffer for IPC_STAT/IPC_SET on success, otherwise msgctl's return value. */
+    /** msgctl; returns the raw msqid_ds Buffer for IPC_STAT on success, otherwise msgctl's return value. Throws a TypeError for IPC_SET (unsupported: it would zero the queue's uid/gid/mode/qbytes). */
     ctl(id: number, cmd: number): Buffer | number;
     /** msgctl(IPC_RMID); throws on failure. */
     close(id: number): true;

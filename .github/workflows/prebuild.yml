@@ -1,0 +1,49 @@
+name: Prebuild
+
+# Reusable: builds the N-API addon once per platform and uploads each as the artifact `prebuilds-<target>`
+# (prebuilds/<platform>-<arch>/). Called by tag.yml (release bundles them) and verify.yml (PR package check).
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  prebuild:
+    name: prebuild ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    # Linux targets build inside an old-glibc image (bullseye: glibc 2.31, GCC 10 libstdc++) so the binary also loads on
+    # bookworm and newer; an empty `container` (macOS) runs on the host. `--tag-libc` (yarn prebuild) names the Linux
+    # file `*.glibc.node`, so node-gyp-build skips it on musl and the install script compiles instead.
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { os: ubuntu-24.04, target: linux-x64, container: 'node:22-bullseye' }
+          - { os: ubuntu-24.04-arm, target: linux-arm64, container: 'node:22-bullseye' }
+          - { os: macos-14, target: darwin-arm64, container: '' }
+          - { os: macos-15-intel, target: darwin-x64, container: '' }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      # --ignore-scripts: do not compile in `install`; `yarn prebuild` below is the one build.
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile --ignore-scripts
+
+      - name: Build prebuild
+        run: yarn prebuild
+
+      - name: Smoke test the prebuild
+        run: node -e "require('node-gyp-build')(process.cwd())" && test -n "$(ls prebuilds/${{ matrix.target }}/*.node)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prebuilds-${{ matrix.target }}
+          path: prebuilds/
+          if-no-files-found: error

@@ -35,3 +35,47 @@ jobs:
 
       - name: Verify (type test + specs)
         run: yarn verify
+
+  # Builds the four platform binaries (same matrix as the release), then proves the packed tarball works without a
+  # compiler: install with --ignore-scripts, so only a shipped prebuild can make the require succeed.
+  prebuild:
+    uses: ./.github/workflows/prebuild.yml
+
+  package:
+    name: package
+    needs: prebuild
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: prebuilds-*
+          path: prebuilds
+          merge-multiple: true
+
+      - name: Pack and install the tarball
+        run: |
+          ls prebuilds/linux-x64/*.glibc.node prebuilds/linux-arm64/*.glibc.node \
+             prebuilds/darwin-arm64/*.node prebuilds/darwin-x64/*.node
+          mkdir "$RUNNER_TEMP/pack" "$RUNNER_TEMP/consumer"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/pack"
+          cd "$RUNNER_TEMP/consumer"
+          npm init -y >/dev/null
+          npm install --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP"/pack/*.tgz
+          test ! -e node_modules/@keletes/svmq/build
+
+      - name: Push/pop round trip from the installed package
+        working-directory: ${{ runner.temp }}/consumer
+        run: |
+          node -e "
+          const Q = require('@keletes/svmq');
+          const q = Q.open(0x4b4c0001);
+          q.push('hi', (e) => {
+            if (e) throw e;
+            q.pop((e, d) => { q.close(); if (e || String(d) !== 'hi') { console.error(e || String(d)); process.exit(1); } console.log('round trip ok'); });
+          });"

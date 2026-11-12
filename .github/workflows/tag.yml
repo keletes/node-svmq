@@ -19,46 +19,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # One N-API binary per platform (works on every supported Node major); uploaded for the release job to bundle.
+  # One N-API binary per platform (prebuild.yml); uploaded as artifacts for the release job to bundle.
   prebuild:
-    name: prebuild ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
-    # Linux targets build inside an old-glibc image (bullseye: glibc 2.31, GCC 10 libstdc++) so the binary also loads on
-    # bookworm and newer; an empty `container` (macOS) runs on the host.
-    container: ${{ matrix.container }}
     permissions:
       contents: read
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - { os: ubuntu-24.04, target: linux-x64, container: 'node:22-bullseye' }
-          - { os: ubuntu-24.04-arm, target: linux-arm64, container: 'node:22-bullseye' }
-          - { os: macos-14, target: darwin-arm64, container: '' }
-          - { os: macos-15-intel, target: darwin-x64, container: '' }
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
-
-      # --ignore-scripts: do not compile in `install`; `yarn prebuild` below is the one build.
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile --ignore-scripts
-
-      - name: Build prebuild
-        run: yarn prebuild
-
-      - name: Smoke test the prebuild
-        run: node -e "require('node-gyp-build')(process.cwd())" && test -n "$(ls prebuilds/${{ matrix.target }}/*.node)"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: prebuilds-${{ matrix.target }}
-          path: prebuilds/
-          if-no-files-found: error
+    uses: ./.github/workflows/prebuild.yml
 
   release:
     needs: prebuild
@@ -103,9 +68,8 @@ jobs:
 
       - name: Check all four prebuilds are present
         run: |
-          for p in linux-x64 linux-arm64 darwin-arm64 darwin-x64; do
-            ls prebuilds/$p/*.node
-          done
+          ls prebuilds/linux-x64/*.glibc.node prebuilds/linux-arm64/*.glibc.node \
+             prebuilds/darwin-arm64/*.node prebuilds/darwin-x64/*.node
 
       - name: Release
         run: yarn semantic-release
